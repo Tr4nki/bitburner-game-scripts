@@ -21,6 +21,7 @@ export async function main(ns) {
 
 	let copyResults;
 	let fileArr = [fileName];
+	let copied;
 
 	try {
 		if (targetHost) {

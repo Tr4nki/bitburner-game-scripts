@@ -12,7 +12,13 @@ export async function main(ns) {
 
 	for (let location of possibleLocations) {
 		infLocation = infilApi.getInfiltration(location);
-		if (cityFilter && infLocation.location.city == cityFilter) {
+		if (cityFilter) {
+			if (infLocation.location.city == cityFilter) {
+				ns.tprint(`++++++++++++++++++    ${location}    ++++++++++++++++++`);
+				printObjectProperties(ns, infLocation);
+				ns.tprint("\n");
+			}
+		} else {
 			ns.tprint(`++++++++++++++++++    ${location}    ++++++++++++++++++`);
 			printObjectProperties(ns, infLocation);
 			ns.tprint("\n");

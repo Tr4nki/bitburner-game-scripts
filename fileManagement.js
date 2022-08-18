@@ -20,6 +20,7 @@ async function copyFile(ns, fileName, targetHost, sourceHost = LOCALHOST) {
 			return true;
 		ns.rm(fileName, targetHost);
 	}
+	
 	return await ns.scp(fileName, sourceHost, targetHost);
 }
 

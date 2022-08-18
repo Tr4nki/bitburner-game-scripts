@@ -1,4 +1,5 @@
-import { ServerSnapshot, terminateProccesses } from "utils.js";
+import { ServerSnapshot } from "utils.js";
+import { terminateProccesses } from "processUtils.js"
 import { MANAGEMENT_SERVER_ACTIONS, BACKUP_SERVER } from "constants.js";
 import { copyFiles, deleteFiles } from "fileManagement.js";
 /** @param {NS} ns */

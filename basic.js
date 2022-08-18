@@ -9,9 +9,12 @@ export async function main(ns) {
 	ns.enableLog("grow");
 	ns.enableLog("weaken");
 	ns.enableLog("hack");
+
+	let flagData = ns.flags([]);
+	let params = flagData._;
 	let hn;
-	if (ns.args.length) {
-		hn = ns.args[0];
+	if (params.length) {
+		[hn] = params;
 	} else {
 		ns.tprint(`Exiting ${ns.getScriptName()}. HostName must be passed as first arg`);
 		return 0;

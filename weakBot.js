@@ -2,7 +2,7 @@
 export async function main(ns) {
 
 	let flagData = ns.flags([]);
-	let [targetHost, instanceThreads = 1] = flagData._;
+	let [targetHost, instanceThreads] = flagData._;
 
 	if (!targetHost || !ns.serverExists(targetHost)) {
 		ns.tprint(`First param must be a valid host name`);
@@ -20,5 +20,5 @@ function getMinuteMillis(minutes) {
 /** @param {NS} ns */
 function keepWorking(ns, targetHost) {
 	return ns.getServerSecurityLevel(targetHost) > ns.getServerMinSecurityLevel(targetHost);
-		// && ns.getWeakenTime(targetHost) < getMinuteMillis(30);
+	// && ns.getWeakenTime(targetHost) < getMinuteMillis(30);
 }

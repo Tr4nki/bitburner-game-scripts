@@ -1,7 +1,11 @@
-import { MINING_SERVERS, MINING_SCRIPTS, XPLOITS_FUNC, PORT_OPEN_ATTRIBUTES } from "constants.js";
-import { isMinable, getAdjacentNodes, buildParamsForScript, canExecuteScripts, getAvailableXploits } from "utils.js";
+import { MINING_SERVERS, MINING_SCRIPTS, XPLOITS_FUNC, PORT_OPEN_ATTRIBUTES, DARK_WEB } from "constants.js";
+import { isMinable, buildParamsForScript, canExecuteScripts, getAvailableXploits, crawlHosts } from "utils.js";
 import { deployScriptsRemote, deployScriptsLocal } from "deployScripts.js"
 
+
+const HOSTS_BLACK_LIST = [
+	DARK_WEB
+];
 /** @param {NS} ns */
 export async function main(ns) {
 
@@ -55,8 +59,6 @@ export async function main(ns) {
 	 * # Ejecutar la version distribuida de este script en el host de destino
 	 * # Relanzar scripts parados en el host actual al inicio de la ejecucion de este script
 	 */
-
-
 }
 
 
@@ -65,26 +67,20 @@ export async function main(ns) {
  * @param {String} hostName
  * @param {String} prevNode
 */
-export function spreadBotnet(ns, hostName, prevNode = ns.getHostname()) {
-	let adjacentNodes;
-	let playerHackingLevel = ns.getHackingLevel();;
+export function spreadBotnet(ns, baseHostName, prevHost) {
 	let requiredHackingLevel;
 	let nukedHosts = [];
-	let nukedChildNodes;
+	let playerHackingLevel = ns.getHackingLevel();;
 	let availableXplotis = getAvailableXploits(ns);
 
-	adjacentNodes = getAdjacentNodes(ns, hostName, prevNode);
+	let crawledHosts = crawlHosts(ns, baseHostName, prevHost);
 
-	for (let node of adjacentNodes) {
-		requiredHackingLevel = ns.getServerRequiredHackingLevel(node);
+	for (let host of crawledHosts) {
+		requiredHackingLevel = ns.getServerRequiredHackingLevel(host);
 		if (playerHackingLevel >= requiredHackingLevel) {
-			if (readyForNuke(ns, node, availableXplotis)) {
-				ns.nuke(node);
-				nukedHosts.push(node);
-				nukedChildNodes = spreadBotnet(ns, node, hostName);
-				if (nukedChildNodes.length) {
-					nukedHosts = nukedHosts.concat(nukedChildNodes);
-				}
+			if (readyForNuke(ns, host, availableXplotis)) {
+				ns.nuke(host);
+				nukedHosts.push(host);
 			}
 		}
 	}
@@ -102,8 +98,9 @@ function readyForNuke(ns, node, availableXplotis) {
 	let xploitable;
 
 	server = ns.getServer(node);
-	if (server.purchasedByPlayer)
+	if (server.purchasedByPlayer || HOSTS_BLACK_LIST.includes(node))
 		return false;
+
 	requiredOpenPorts = server.numOpenPortsRequired;
 	if (server.openPortCount >= requiredOpenPorts || requiredOpenPorts == 0) {
 		return true;

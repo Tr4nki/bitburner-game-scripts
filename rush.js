@@ -1,5 +1,6 @@
 import { SUPPORT_SERVERS, RUSH_BOTS, LOCALHOST } from "constants.js";
-import { calcMaxThreadsForScript, spawnRemoteScript } from "utils.js";
+import { buildParamsForScript } from "utils.js";
+import { deployScriptsLocal } from "deployScripts.js";
 
 /** @param {NS} ns */
 export async function main(ns) {
@@ -21,9 +22,9 @@ export async function main(ns) {
 
 /** @param {NS} ns */
 export async function spawnRushBot(ns, script, targetHost, hostList) {
-	let maxThreads;
-	for (let runningServer of hostList) {
-		maxThreads = calcMaxThreadsForScript(ns, script, runningServer);
-		await spawnRemoteScript(ns, script, runningServer, maxThreads, targetHost, maxThreads);
+	if (hostList.length) {
+		let paramsByScript = buildParamsForScript(ns, [script], targetHost);
+		await deployScriptsLocal(ns, [script], hostList, undefined, paramsByScript, true);
 	}
+	// export async function deployScriptsLocal(ns, files, targetHostList, sourceHost, paramsByScript, runAfter, execThreads) {
 }

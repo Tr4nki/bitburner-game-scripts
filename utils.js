@@ -1,4 +1,5 @@
-import { LOCALHOST, MIN_BASE_SECURITY_LEVEL_RATIO, EXECUTABLES } from "constants.js"
+import { LOCALHOST, MIN_BASE_SECURITY_LEVEL_RATIO, EXECUTABLES, DARK_WEB, BASE_WEAK_AMOUNT, CORE_WEAK_BONUS } from "constants.js"
+
 /** @param {NS} ns */
 export default async function main(ns) {
 
@@ -10,8 +11,18 @@ export default async function main(ns) {
 */
 export function isMinable(ns, hostName) {
 	let server = ns.getServer(hostName);
-	return server.hasAdminRights && !server.purchasedByPlayer && server.moneyMax > 0;
+	return hostName != DARK_WEB && server.hasAdminRights && !server.purchasedByPlayer && server.moneyMax > 0;
 }
+
+/** 
+ * @param {NS} ns
+ * @param {String} hostName
+*/
+export function isNotMinable(ns, hostName) {
+	let server = ns.getServer(hostName);
+	return hostName != DARK_WEB && server.hasAdminRights && !server.purchasedByPlayer && server.moneyMax <= 0;
+}
+
 /** 
  * @param {NS} ns
  * @param {String} hostName
@@ -36,16 +47,37 @@ export function getAdjacentNodes(ns, baseNode, prevNode) {
  * @param {String} targetHost Target host where perform calculations
 */
 export function calcMaxThreadsForScript(ns, scriptName, targetHost) {
-
-	let scriptRAM = ns.getScriptRam(scriptName, targetHost);
-	let hostFreeRam = ns.getServerMaxRam(targetHost) - ns.getServerUsedRam(targetHost);
+	let scriptRAM = calcScriptRam(ns, scriptName);
+	let hostFreeRam = calcFreeRam(ns, targetHost);
 	let maxThreads = Math.floor(hostFreeRam / scriptRAM);
 	return maxThreads;
 }
 
+/** @param {NS} ns */
 export function calcMaxThreadsForInstances(threadsPerInstance, instances) {
 	return Math.floor(threadsPerInstance / instances);
 }
+
+/** @param {NS} ns */
+export function calcScriptRam(ns, scriptName) {
+	return ns.getScriptRam(scriptName, LOCALHOST);
+}
+
+/** @param {NS} ns */
+export function calcFreeRam(ns, targetHost) {
+	let maxRam = ns.getServerMaxRam(targetHost);
+	if (targetHost == LOCALHOST)
+		maxRam -= 20;
+	return maxRam - ns.getServerUsedRam(targetHost);
+}
+
+/** @param {NS} ns */
+export function enoughtRamForScript(ns, targetHost, script) {
+	let freeSpace = calcFreeRam(ns, targetHost);
+	let scriptRam = calcScriptRam(ns, script);
+	return freeSpace >= scriptRam;
+}
+
 
 /** @param {NS} ns */
 export function log(ns, templateStr) {
@@ -56,19 +88,24 @@ export function log(ns, templateStr) {
 /** @param {NS} ns */
 export function buildParamsForScript(ns, scriptList, rawParamData) {
 	let ret = {};
+	let packedParams = [];
 
 	for (let script of scriptList) {
 		switch (script) {
 			case "basic.js":
 				let { targetHosts } = rawParamData;
-				let packedParams = [];
 				for (let host of targetHosts) {
 					packedParams.push([host]);
 				}
 				// ns.tprint(`targetHosts -> ${targetHosts}`);
 				ret[script] = packedParams || [];
 				break;
-
+			case "weakBot.js":
+			case "growBot.js":
+			case "hackBot.js":
+				packedParams.push([rawParamData])
+				ret[script] = packedParams; //explicar por que se empaquetan así los parametros
+				break;
 			default:
 				break;
 
@@ -79,11 +116,27 @@ export function buildParamsForScript(ns, scriptList, rawParamData) {
 	return ret;
 }
 /** @param {NS} ns */
+export function getSecondMillis(ns, seconds) {
+	try {
+		return seconds * 1000;
+	} catch (e) {
+		ns.print(`Specified minutes argument -> ${seconds} is causing problems. Error: ${e.message}`);
+	}
+}
+/** @param {NS} ns */
 export function getMinuteMillis(ns, minutes) {
 	try {
-		return minutes * 60 * 1000;
+		return minutes * getSecondMillis(ns, 60);
 	} catch (e) {
 		ns.print(`Specified minutes argument -> ${minutes} is causing problems. Error: ${e.message}`);
+	}
+}
+/** @param {NS} ns */
+export function getHourMillis(ns, hours) {
+	try {
+		return hours * getMinuteMillis(60);
+	} catch (e) {
+		ns.print(`Specified minutes argument -> ${hours} is causing problems. Error: ${e.message}`);
 	}
 }
 
@@ -95,8 +148,8 @@ export function calcPercent(currentValue, totalValue) {
 	return calcRatio(currentValue, totalValue) * 100;
 }
 /** @param {NS} ns */
-export function getFreeNodes(ns, nodeGroup) {
-	return nodeGroup.filter(node => ns.getServerUsedRam(node) == 0);
+export function getFreeNodes(ns, nodeGroup, script) {
+	return nodeGroup.filter(node => enoughtRamForScript(ns, node, script));
 }
 
 /** @param {NS} ns */
@@ -138,22 +191,6 @@ export function getAvailableXploits(ns) {
 }
 
 /** @param {NS} ns */
-export function terminateProccesses(ns, serverName, safetyGuard = false) {
-	let procs = ns.ps(serverName);
-	return procs && procs.length ? ns.killall(serverName, safetyGuard) : true;
-}
-/** @param {NS} ns */
-export async function spawnRemoteScript(ns, script, runningServer, maxThreads, ...args) {
-	if (ns.hasRootAccess(runningServer)) {
-
-		if (runningServer != LOCALHOST) {
-			ns.killall(runningServer);
-			await copyFiles(ns, [script], runningServer);
-		}
-		maxThreads = maxThreads || calcMaxThreadsForScript(ns, script, runningServer);
-		ns.exec(script, runningServer, maxThreads, ...args);
-	}
-}
 export function printObjectProperties(ns, objToPrint, d = 1) {
 
 	for (let [key, value] of Object.entries(objToPrint)) {
@@ -162,7 +199,7 @@ export function printObjectProperties(ns, objToPrint, d = 1) {
 			printObjectProperties(ns, value, d + 1);
 		} else {
 			if (typeof value == "number") {
-				ns.tprint(`${">>>".repeat(d)} ${key} --> ${ns.nFormat(value,"0,0.[00]")}`);
+				ns.tprint(`${">>>".repeat(d)} ${key} --> ${ns.nFormat(value, "0,0.[00]")}`);
 			} else {
 				ns.tprint(`${">>>".repeat(d)} ${key} --> ${value}`);
 			}
@@ -170,6 +207,55 @@ export function printObjectProperties(ns, objToPrint, d = 1) {
 	}
 }
 
+/** @param {NS} ns */
+export function crawlHosts(ns, baseHostName, prevNode = ns.getHostname()) {
+	let crawledHosts = [];
+	let adjacentNodes = getAdjacentNodes(ns, baseHostName, prevNode);
+	for (let host of adjacentNodes) {
+		crawledHosts.push(host);
+		crawledHosts = crawledHosts.concat(crawlHosts(ns, host, baseHostName));
+	}
+	return crawledHosts;
+}
+
+/** @param {NS} ns */
+export function calcThreadsForMinSec(ns, hostName, cores) {
+	return calcThreadsForWeak(ns, hostName, ns.getServerMinSecurityLevel(hostName), cores);
+}
+
+/** @param {NS} ns */
+export function calcThreadsForMaxMoney(ns, hostName, cores) {
+	return calcThreadsForGrow(ns, hostName, ns.getServerMaxMoney(hostName), cores);
+}
+
+/** @param {NS} ns */
+export function calcThreadsForWeak(ns, hostName, desiredLvl, cores) {
+	let diff = ns.getServerSecurityLevel(hostName) - desiredLvl;
+	if (diff <= 0) {
+		return 0;
+	}
+	let ret = diff / ns.weakenAnalyze(1, cores);
+	return Math.ceil(ret);
+}
+
+function calcWeakEffect(cores) {
+	return BASE_WEAK_AMOUNT + (CORE_WEAK_BONUS * cores);
+}
+
+/** @param {NS} ns */
+export function calcThreadsForGrow(ns, hostName, desiredMoney, cores) {
+	let currentMoney = ns.getServerMoneyAvailable(hostName);
+	let diff = desiredMoney - currentMoney;
+	if (diff <= 0) {
+		return 0;
+	}
+	let incrRatio = diff / currentMoney;
+	if (incrRatio < 1) {
+		incrRatio += 1;
+	}
+
+	return Math.ceil(ns.growthAnalyze(hostName, incrRatio, cores));
+}
 /** @param {NS} ns */
 export function ServerSnapshot(ns, serverName) {
 

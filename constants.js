@@ -1,9 +1,13 @@
 export default 0;
 export const LOCALHOST = "home";
 export const BACKUP_SERVER = "backupServer";
+export const DARK_WEB = "darkweb";
 export const THREADS_LOCAL_MINING = 16;
 export const MIN_SECURITY_LEVEL = 1;
 export const MIN_BASE_SECURITY_LEVEL_RATIO = 1 / 3;
+export const SHARE_BOT = "shareBot.js";
+export const CORE_WEAK_BONUS = 1 / 16;
+export const BASE_WEAK_AMOUNT = 0.05
 
 export const RUSH_BOTS = {
 	HACK: "hackBot.js",
@@ -48,7 +52,8 @@ export const XPLOITS_FUNC = {
 export const MINING_SERVERS = [
 	"bacterio",
 	"mortadelo",
-	"ofelia"
+	"ofelia",
+	"superintendente"
 ];
 export const SUPPORT_SERVERS = [
 	"sona",
@@ -56,6 +61,8 @@ export const SUPPORT_SERVERS = [
 	"nami",
 	"home"
 ];
+export const ALL_SERVERS = [...MINING_SERVERS, ...SUPPORT_SERVERS];
+
 export const MINING_STATES = {
 	GROWING: "GROWING",//while server current money < 80% server max money
 	WEAKENING: "WEAKENING",//while server current security > 50% server max security
@@ -78,7 +85,9 @@ export const FILES_SCRIPTS = [
 ];
 export const SPREADING_SCRIPTS = [
 	"deployScripts.js",
-	"botnet.js"
+	"botnet.js",
+	"seeker.js",
+	"rush.js"
 ];
 export const CONTRACT_SCRIPTS = [
 	"contracts.js"
@@ -86,9 +95,13 @@ export const CONTRACT_SCRIPTS = [
 export const UTIL_SCRIPTS = [
 	"constants.js",
 	"utils.js",
-
+	"processUtils.js"
 ];
-export const ALL_SCRIPTS = [...MINING_SCRIPTS, ...FILES_SCRIPTS, ...SPREADING_SCRIPTS, ...CONTRACT_SCRIPTS, ...UTIL_SCRIPTS];
+export const SHARE_SCRIPTS = [
+	"spreadShare.js",
+	"shareBot.js"
+];
+export const ALL_SCRIPTS = [...MINING_SCRIPTS, ...FILES_SCRIPTS, ...SPREADING_SCRIPTS, ...CONTRACT_SCRIPTS, ...UTIL_SCRIPTS, ...SHARE_SCRIPTS];
 
 export const CONTRACT_TYPES = {
 	LARGEST_PRIME_FACTOR: "Find Largest Prime Factor",

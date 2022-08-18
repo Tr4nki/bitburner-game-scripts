@@ -40,10 +40,10 @@ function runAfterLocal(ns, scripts, resultsByHost, paramsByScript, execThreads) 
 	for (let [localHost, copyResult] of Object.entries(resultsByHost)) {
 		for (let i = 0; i < scripts.length; i++) {
 			if (copyResult[i]) {
-
 				execThreads = execThreads || calcMaxThreadsForScript(ns, scripts[i], localHost);
 				execThreads = calcMaxThreadsForInstances(execThreads, paramsByScript[scripts[i]].length);
 				for (let params of paramsByScript[scripts[i]]) {
+					// spawnRemoteScript(ns, scripts[i], localHost, execThreads, params);
 					runScript(ns, scripts[i], localHost, execThreads, params);
 				}
 			}
@@ -62,6 +62,19 @@ export async function deployScriptsRemote(ns, files, targetHostList, sourceHost,
 		}
 	}
 }
+
+/** @param {NS} ns */
+function runAfterRemote(ns, files, resultsByHost) {
+	for (let [remoteHost, result] of Object.entries(resultsByHost)) {
+		for (let i = 0; i < files.length; i++) {
+			if (result[i]) {
+				// spawnRemoteScript(ns, files[i], remoteHost, null, remoteHost);
+				runScript(ns, files[i], remoteHost, null, [remoteHost]);
+			}
+		}
+	}
+}
+
 /** @param {NS} ns */
 export function runScript(ns, file, runningHost, execThreads, args) {
 	execThreads = execThreads || calcMaxThreadsForScript(ns, file, runningHost);
@@ -70,12 +83,4 @@ export function runScript(ns, file, runningHost, execThreads, args) {
 	}
 }
 
-function runAfterRemote(ns, files, resultsByHost) {
-	for (let [remoteHost, result] of Object.entries(resultsByHost)) {
-		for (let i = 0; i < files.length; i++) {
-			if (result[i]) {
-				runScript(ns, files[i], remoteHost, null, [remoteHost]);
-			}
-		}
-	}
-}
+// export async function spawnRemoteScript(ns, script, runningServer, maxThreads, ...args) {
